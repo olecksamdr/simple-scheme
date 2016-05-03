@@ -20,8 +20,8 @@ bool isdig(char c) { return isdigit(static_cast<unsigned char>(c)) != 0; }
 
 ////////////////////// cell
 
-enum cell_type { SYMBOL, NUMBER, LIST, EMPTY_LIST, STRING, BOOLEAN, PROC};
-const char *type_arr[7] = {"SYMBOL", "NUMBER", "LIST", "EMPTY_LIST", "STRING", "BOOLEAN", "PROC"};
+enum cell_type { SYMBOL, NUMBER, LIST, EMPTY_LIST, STRING, CHARACTER, BOOLEAN, PROC};
+const char *type_arr[8] = {"SYMBOL", "NUMBER", "LIST", "EMPTY_LIST", "STRING", "CHARACTER", "BOOLEAN", "PROC"};
 
 struct environment; // forward declaration; cell and environment reference each other
 
@@ -57,6 +57,39 @@ bool isBool(const std::string & token) {
     };
 }
 
+bool isCharacter(const std::string & token) {
+    if (token[0] == '#' && token[1] == '\\') {
+
+        if (token.length() > 3) {
+            // if #\newline or #\space character
+            std::string cr = token.substr(2, token.length() - 2);
+            if ( cr == "newline" || cr == "space") {
+                return true;
+            } else {
+                std::cout << "Unknown character" << std::endl;
+                return false;
+            }
+        } else if (token.length() == 3) {
+            return true;
+        }
+    } else {
+        return false;
+    }
+}
+
+std::string parseCharacter(const std::string & token) {
+    std::string ret;
+    if (token[3] == '\n'){
+        ret = "#\\newline";
+        return ret;
+    }
+    if (token[3] == ' ') {
+        ret = "#\\space";
+        return ret;
+    }
+    return token;
+}
+
 bool isNill(cell & c) {
     return c.val == "nil";
 }
@@ -73,7 +106,7 @@ std::list<std::string> tokenize(const std::string & str)
             ++s;
         if (*s == '(' || *s == ')')
             tokens.push_back(*s++ == '(' ? "(" : ")");
-        else {
+        else{
             const char * t = s;
             while (*t && *t != ' ' && *t != '(' && *t != ')')
                 ++t;
@@ -85,6 +118,7 @@ std::list<std::string> tokenize(const std::string & str)
 }
 
 void print_tokens(cell c) {
+
     if (c.type == EMPTY_LIST) {
         std::cout << type_arr[c.type] << "()" << std::endl;
     }
@@ -113,11 +147,16 @@ cell atom(const std::string & token)
 {
     if (isdig(token[0]) || (token[0] == '-' && isdig(token[1])))
         return cell(NUMBER, token);
+
     if (isBool(token)) {
         switch (token[1]) {
             case 't': return true_sym;
             case 'f': return false_sym;
         }
+    }
+
+    if (isCharacter(token)) {
+        return cell(CHARACTER, parseCharacter(token));
     }
     return cell(SYMBOL, token);
 }
