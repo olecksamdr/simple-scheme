@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -182,10 +183,12 @@ cell make_lisp_obj(std::list<std::string> & tokens)
 }
 
 // return the Lisp expression represented by the given string
-cell read(const std::string & s)
+void read(const std::string & s)
 {
     std::list<std::string> tokens(tokenize(s));
-    return make_lisp_obj(tokens);
+	if (tokens.size() > 0) {
+		print_tokens(make_lisp_obj(tokens));
+	}
 }
 
 
@@ -196,7 +199,8 @@ void repl(const std::string & prompt)
         std::cout << prompt;
         std::string line;
         std::getline(std::cin, line);
-        print_tokens(read(line));
+		
+		read(line);
     }
 }
 
