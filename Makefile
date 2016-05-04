@@ -1,4 +1,6 @@
-Scheme:
-	g++ main.cpp -o Scheme
+Scheme: main.o
+	g++ main.o -o Schemes
+main.o: main.cpp
+	g++ -c main.cpp
 clean:
-	rm *.o schm
+	rm *.o Scheme

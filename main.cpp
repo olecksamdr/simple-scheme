@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -6,6 +5,7 @@
 #include <list>
 #include <map>
 #include <cstdlib>
+#include <stdio.h>
 
 // ALIAS
 // read_from => make_list_obj
@@ -76,6 +76,40 @@ bool isCharacter(const std::string & token) {
     } else {
         return false;
     }
+}
+// Errro when "test"", "test"s
+// But allow "test\" a"
+bool isString(const std::string & token) {
+    const char * s = token.c_str();
+    int count = 2;
+    ++s;
+    if (token[0] == '"') {
+        while(*s != '"') {
+            if (*s == '\\') {
+                ++count;
+                ++s;
+                if (*s == '"') {
+                    // ++count;
+                    // continue;
+                }
+            }
+             if (*s == 0) {
+                std::cout << "non-terminated string literal" << std::endl;
+                exit(1);
+            }
+            ++count;
+            ++s;
+        }
+        if (count != token.length()) {
+            std::cout << "error in string literal" << std::endl;
+            exit(1);
+        }
+
+        return true;
+    }
+
+    return false;
+
 }
 
 std::string parseCharacter(const std::string & token) {
@@ -159,6 +193,10 @@ cell atom(const std::string & token)
     if (isCharacter(token)) {
         return cell(CHARACTER, parseCharacter(token));
     }
+
+    if (isString(token)) {
+        return cell(STRING, token);
+    }
     return cell(SYMBOL, token);
 }
 
@@ -206,5 +244,6 @@ void repl(const std::string & prompt)
 
 int main ()
 {
+    std::cout << "Smiple Sheme interpretator press ctr+c to exit" << std::endl;
     repl("> ");
 }
