@@ -48,6 +48,46 @@ const cell false_sym(BOOLEAN, "#f");
 const cell true_sym(BOOLEAN, "#t"); // anything that isn't false_sym is true
 const cell nil(EMPTY_LIST, "nil");
 
+////////////////////// environment
+
+// a dictionary that (a) associates symbols with cells, and
+// (b) can chain to an "outer" dictionary
+struct environment {
+    environment(environment * outer = 0) : outer_(outer) {}
+
+    environment(const cells & parms, const cells & args, environment * outer)
+    : outer_(outer)
+    {
+        cellit a = args.begin();
+        for (cellit p = parms.begin(); p != parms.end(); ++p)
+            env_[p->val] = *a++;
+    }
+
+    // map a variable name onto a cell
+    typedef std::map<std::string, cell> map;
+
+    // return a reference to the innermost environment where 'var' appears
+    map & find(const std::string & var)
+    {
+        if (env_.find(var) != env_.end())
+            return env_; // the symbol exists in this environment
+        if (outer_)
+            return outer_->find(var); // attempt to find the symbol in some "outer" env
+        std::cout << "unbound symbol '" << var << "'\n";
+        exit(1);
+    }
+
+    // return a reference to the cell associated with the given symbol 'var'
+    cell & operator[] (const std::string & var)
+    {
+        return env_[var];
+    }
+    
+private:
+    map env_; // inner symbol->cell mapping
+    environment * outer_; // next adjacent outer env, or 0 if there are no further environments
+};
+
 bool isBool(const std::string & token) {
     if (token.length() == 2) {
         if (token[0] == '#' && (token[1] == 'f' || token[1] == 't'))
