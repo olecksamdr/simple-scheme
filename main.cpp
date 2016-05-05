@@ -7,6 +7,13 @@
 #include <cstdlib>
 #include <stdio.h>
 
+
+#include "cell_type.h"
+#include "utils.cpp"
+#include "cell.h"
+// Масив який будемо використовувати для виведення типу обєкта на екран
+const char *type_arr[8] = {"SYMBOL", "NUMBER", "LIST", "EMPTY_LIST", "STRING", "CHARACTER", "BOOLEAN", "PROC"};
+
 // ALIAS
 // read_from => make_list_obj
 
@@ -18,31 +25,6 @@ std::string str(long n) { std::ostringstream os; os << n; return os.str(); }
 // return true iff given character is '0'..'9'
 bool isdig(char c) { return isdigit(static_cast<unsigned char>(c)) != 0; }
 
-
-////////////////////// cell
-
-enum cell_type { SYMBOL, NUMBER, LIST, EMPTY_LIST, STRING, CHARACTER, BOOLEAN, PROC};
-const char *type_arr[8] = {"SYMBOL", "NUMBER", "LIST", "EMPTY_LIST", "STRING", "CHARACTER", "BOOLEAN", "PROC"};
-
-struct environment; // forward declaration; cell and environment reference each other
-
-// a variant that can hold any kind of lisp value
-struct cell {
-    typedef cell (*proc_type)(const std::vector<cell> &);
-    typedef std::vector<cell>::const_iterator iter;
-    typedef std::map<std::string, cell> map;
-    cell_type type;
-    std::string val;
-    std::vector<cell> list;
-    proc_type proc;
-    environment * env;
-    cell(cell_type type = SYMBOL) : type(type), env(0) {};
-    cell(cell_type type, const std::string & val) : type(type), val(val), env(0) {};
-    cell(proc_type proc) : type(PROC), proc(proc), env(0) {};
-};
-
-typedef std::vector<cell> cells;
-typedef cells::const_iterator cellit;
 
 const cell false_sym(BOOLEAN, "#f");
 const cell true_sym(BOOLEAN, "#t"); // anything that isn't false_sym is true
@@ -87,87 +69,6 @@ private:
     map env_; // inner symbol->cell mapping
     environment * outer_; // next adjacent outer env, or 0 if there are no further environments
 };
-
-bool isBool(const std::string & token) {
-    if (token.length() == 2) {
-        if (token[0] == '#' && (token[1] == 'f' || token[1] == 't'))
-            return true;
-        else return false;
-    } else {
-        return false;
-    };
-}
-
-bool isCharacter(const std::string & token) {
-    if (token[0] == '#' && token[1] == '\\') {
-
-        if (token.length() > 3) {
-            // if #\newline or #\space character
-            std::string cr = token.substr(2, token.length() - 2);
-            if ( cr == "newline" || cr == "space") {
-                return true;
-            } else {
-                std::cout << "Unknown character" << std::endl;
-                return false;
-            }
-        } else if (token.length() == 3) {
-            return true;
-        }
-    } else {
-        return false;
-    }
-}
-// Errro when "test"", "test"s
-// But allow "test\" a"
-bool isString(const std::string & token) {
-    const char * s = token.c_str();
-    int count = 2;
-    ++s;
-    if (token[0] == '"') {
-        while(*s != '"') {
-            if (*s == '\\') {
-                ++count;
-                ++s;
-                if (*s == '"') {
-                    // ++count;
-                    // continue;
-                }
-            }
-             if (*s == 0) {
-                std::cout << "non-terminated string literal" << std::endl;
-                exit(1);
-            }
-            ++count;
-            ++s;
-        }
-        if (count != token.length()) {
-            std::cout << "error in string literal" << std::endl;
-            exit(1);
-        }
-
-        return true;
-    }
-
-    return false;
-
-}
-
-std::string parseCharacter(const std::string & token) {
-    std::string ret;
-    if (token[3] == '\n'){
-        ret = "#\\newline";
-        return ret;
-    }
-    if (token[3] == ' ') {
-        ret = "#\\space";
-        return ret;
-    }
-    return token;
-}
-
-bool isNill(cell & c) {
-    return c.val == "nil";
-}
 
 ////////////////////// parse, read and user interaction
 
