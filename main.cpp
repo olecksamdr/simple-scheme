@@ -8,9 +8,10 @@
 #include <stdio.h>
 
 
+#include "utils.h"
 #include "cell_type.h"
-#include "utils.cpp"
 #include "cell.h"
+#include "scheme_procedure.h"
 // Масив який будемо використовувати для виведення типу обєкта на екран
 const char *type_arr[8] = {"SYMBOL", "NUMBER", "LIST", "EMPTY_LIST", "STRING", "CHARACTER", "BOOLEAN", "PROC"};
 
@@ -19,11 +20,7 @@ const char *type_arr[8] = {"SYMBOL", "NUMBER", "LIST", "EMPTY_LIST", "STRING", "
 
 // need to create : CHARACTER
 
-// return given mumber as a string
-std::string str(long n) { std::ostringstream os; os << n; return os.str(); }
 
-// return true iff given character is '0'..'9'
-bool isdig(char c) { return isdigit(static_cast<unsigned char>(c)) != 0; }
 
 
 const cell false_sym(BOOLEAN, "#f");

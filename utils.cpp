@@ -1,4 +1,10 @@
+#include "utils.h"
 #include "cell.h"
+
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <cstdlib>
 
 // return given mumber as a string
 std::string str(long n) { std::ostringstream os; os << n; return os.str(); }
