@@ -12,6 +12,9 @@
 #include "cell_type.h"
 #include "cell.h"
 #include "scheme_procedure.h"
+
+// function evaluate scheme expression
+// #include "eval.cpp"
 // Масив який будемо використовувати для виведення типу обєкта на екран
 const char *type_arr[8] = {"SYMBOL", "NUMBER", "LIST", "EMPTY_LIST", "STRING", "CHARACTER", "BOOLEAN", "PROC"};
 
@@ -45,6 +48,17 @@ struct environment {
     // map a variable name onto a cell
     typedef std::map<std::string, cell> map;
 
+    bool exists(const std::string & var)
+    {
+        if (env_.find(var) != env_.end())
+            return true; // the symbol exists in this environment
+        if (outer_)
+            return outer_->exists(var); // attempt to find the symbol in some "outer" env
+        // std::cout << "unbound symbol '" << var << "'\n";
+        // exit(1);
+        return false;
+    }
+
     // return a reference to the innermost environment where 'var' appears
     map & find(const std::string & var)
     {
@@ -52,8 +66,8 @@ struct environment {
             return env_; // the symbol exists in this environment
         if (outer_)
             return outer_->find(var); // attempt to find the symbol in some "outer" env
-        std::cout << "unbound symbol '" << var << "'\n";
-        exit(1);
+        // std::cout << "unbound symbol '" << var << "'\n";
+        // exit(1);
     }
 
     // return a reference to the cell associated with the given symbol 'var'
@@ -67,6 +81,16 @@ private:
     environment * outer_; // next adjacent outer env, or 0 if there are no further environments
 };
 
+// define the bare minimum set of primintives
+void add_globals(environment & env)
+{
+    env["nil"] = nil;   env["#f"] = false_sym;  env["#t"] = true_sym;
+
+    env["+"] = cell(&proc_add);
+    env["-"] = cell(&proc_sub);
+    env["*"] = cell(&proc_mul);
+    env["/"] = cell(&proc_div);
+}
 ////////////////////// parse, read and user interaction
 
 // convert given string to list of tokens
@@ -90,28 +114,18 @@ std::list<std::string> tokenize(const std::string & str)
     return tokens;
 }
 
-void print_tokens(cell c) {
-
-    if (c.type == EMPTY_LIST) {
-        std::cout << type_arr[c.type] << "()" << std::endl;
+std::string to_string(const cell & exp) {
+    if (exp.type == LIST) {
+        std::string s("(");
+        for (cell::iter e = exp.list.begin(); e != exp.list.end(); ++e)
+            s += to_string(*e) + ' ';
+        if (s[s.size() - 1] == ' ')
+            s.erase(s.size() - 1);
+        return s + ')';
     }
-    /* print LIST (2 3) like 
-        LIST( 
-            NUMBER 2
-            NUMBER 3
-        )
-    */
-    if (c.type == LIST) {
-        std::cout << type_arr[c.type] << " ( " << std::endl;
-        for (int i = 0; i < c.list.size(); i++) {
-            std::cout << "  " << type_arr[c.list[i].type] << " ";
-            std::cout << c.list[i].val << std::endl;
-        }
-        std::cout << " )" << std::endl;
-    } else {
-        std::cout << type_arr[c.type] << " ";
-        std::cout << c.val << std::endl;
-    }
+    else if (exp.type == PROC)
+        return "<Proc>";
+    return exp.val;
 }
 
 // numbers become NUMBER;
@@ -149,39 +163,79 @@ cell make_lisp_obj(std::list<std::string> & tokens)
             c.list.push_back(make_lisp_obj(tokens));
         tokens.pop_front();
 
-        if (c.list.size() == 0) 
-            c.type = EMPTY_LIST;
+        if (c.list.size() == 0){
+            return nil;
+        }
 
         return c;
     }
     else
         return atom(token);
 }
+////////////////////// eval
+
+cell eval(cell x, environment * env) {
+    if (x.type == SYMBOL)
+       if(env->exists(x.val))
+            return env->find(x.val)[x.val];
+        else return x;
+
+    if (x.type == NUMBER)
+        return x;
+
+    if (x.type == EMPTY_LIST)
+        return x;
+
+    if (x.type == LIST) {
+        // Дивимося чим являється перший елемент нашого списку
+        cell proc(eval(x.list[0], env));
+        // поступово обчислюємо всі наступні елементи list і записуємо результат в вектор vector<cell> exps
+        cells exps;
+        for (cell::iter exp = x.list.begin() + 1; exp != x.list.end(); ++exp)
+            exps.push_back(eval(*exp, env));
+        // якщо перший елемент списку процедура
+        // то повертаємо результат її виконання (викликаємо її передавши як аргумент вектор всіх обчислених елементів)
+        if (proc.type == PROC)
+            return proc.proc(exps);
+        else {
+            // Якщо перший елемент не процедура, то обчислюємо все що можна обчислити 
+            // і повертоємо це все як новий список
+            cell list(LIST);
+            exps.insert(exps.begin(), proc);
+            for (cell::iter itt = exps.begin(); itt != exps.end(); ++itt) {
+                list.list.push_back(*itt);
+            }
+            return list;
+        }
+    }
+}
 
 // return the Lisp expression represented by the given string
-void read(const std::string & s)
+void read(const std::string & s, environment * env)
 {
     std::list<std::string> tokens(tokenize(s));
-	if (tokens.size() > 0) {
-		print_tokens(make_lisp_obj(tokens));
-	}
+    if (tokens.size() > 0) {
+        std::cout << to_string(eval(make_lisp_obj(tokens), env)) << std::endl;
+    }
 }
 
 
 // the default read-eval-print-loop
-void repl(const std::string & prompt)
+void repl(const std::string & prompt, environment * env)
 {
     while (true) {
         std::cout << prompt;
         std::string line;
         std::getline(std::cin, line);
-		
-		read(line);
+
+        read(line, env);
     }
 }
 
 int main ()
 {
+    environment global_env;
+    add_globals(global_env);
     std::cout << "Smiple Sheme interpretator press ctr+c to exit" << std::endl;
-    repl("> ");
+    repl("> ", &global_env);
 }

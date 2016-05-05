@@ -3,10 +3,9 @@
 
 #include "cell.h"
 
-// + - * /
-cell proc_add(const cells & c);
-cell proc_sub(const cells & c);
-cell proc_mul(const cells & c);
-cell proc_div(const cells & c);
+cell proc_add(const cells & c); // +
+cell proc_sub(const cells & c); // -
+cell proc_mul(const cells & c); // *
+cell proc_div(const cells & c); // /
 
 #endif
